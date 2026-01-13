@@ -15,7 +15,6 @@ app.use(express.static(__dirname));
 ================================ */
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-
 // invite_link -> createdAt
 const inviteMap = new Map();
 
