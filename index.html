@@ -3,35 +3,93 @@
 <head>
   <title>Verify Access</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+    }
+    #status {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
+
   <h3>Verify to Continue</h3>
-  <button id="verify">Verify</button>
+  <button id="verifyBtn">Verify</button>
+  <div id="status"></div>
 
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
 
+    const statusDiv = document.getElementById("status");
+    const btn = document.getElementById("verifyBtn");
+
+    // Telegram passes this in URL (for display only)
     const params = new URLSearchParams(window.location.search);
-    const startapp = params.get("startapp");
+    const displayStartParam = params.get("tgWebAppStartParam");
 
-    document.getElementById("verify").onclick = async () => {
-      const res = await fetch("/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          initData: tg.initData,
-          startapp
-        })
-      });
+    function setStatus(msg, color = "black") {
+      statusDiv.textContent = msg;
+      statusDiv.style.color = color;
+    }
 
-      const data = await res.json();
-      if (data.redirect) {
-        window.location.href = data.redirect;
-      } else {
-        alert("Verification failed");
+    btn.onclick = async () => {
+      btn.disabled = true;
+      setStatus("Verifying…", "gray");
+
+      if (!tg.initData) {
+        setStatus("❌ Open this page from Telegram", "red");
+        btn.disabled = false;
+        return;
+      }
+
+      try {
+        const res = await fetch("/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            initData: tg.initData
+          })
+        });
+
+        const text = await res.text();
+        let data;
+
+        try {
+          data = JSON.parse(text);
+        } catch {
+          setStatus("❌ Server error", "red");
+          btn.disabled = false;
+          return;
+        }
+
+        if (!data.redirect) {
+          setStatus("❌ Verification failed", "red");
+          btn.disabled = false;
+          return;
+        }
+
+        setStatus("✅ Verified, redirecting…", "green");
+        setTimeout(() => {
+          window.location.href = data.redirect;
+        }, 800);
+
+      } catch (err) {
+        setStatus("❌ Network error", "red");
+        btn.disabled = false;
       }
     };
   </script>
+
 </body>
 </html>
+
